@@ -6,6 +6,7 @@
 # Databases
 *.db
 !sample.db
+!cricpredict.db
 
 # Python
 __pycache__/
