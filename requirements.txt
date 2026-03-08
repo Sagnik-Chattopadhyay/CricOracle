@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+gunicorn
+sqlalchemy
+pandas
+requests
+python-dotenv
+pydantic

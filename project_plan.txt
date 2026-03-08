@@ -1,0 +1,282 @@
+🏏
+CRICPREDICT
+AI-Powered Cricket Match Prediction Platform
+Full Project Execution Plan
+Covering: International Cricket  •  IPL  •  Franchise Leagues
+Version 1.0  |  March 2026
+1. Project Overview
+CricPredict is a full-stack, data-driven cricket match prediction platform built primarily for the Indian audience. It predicts match outcomes between Team A and Team B by analysing historical head-to-head records, current squad form, individual player statistics, pitch conditions, and contextual factors like toss results and venue history.
+The platform covers all major formats and competitions:
+The core value proposition is realism — predictions backed by quantifiable data, weighted recency, and transparent confidence scores rather than guesswork.
+2. Goals & Success Metrics
+Primary Goals
+Head-to-head match prediction with win probability percentage for both teams
+Player form index — automated ranking of who's hot and who's not
+Squad comparison side-by-side with batting, bowling & fielding stats
+Historical analysis — last 5, 10, all-time results between two teams
+Venue & pitch intelligence — how teams perform at specific grounds
+Success Metrics (at launch)
+3. Data Architecture & Sources
+Data is the backbone of this platform. Realistic predictions require rich, accurate, and frequently updated datasets. Below is the full data strategy.
+3.1 Primary Data Sources
+3.2 Data Points to Collect
+Team Level
+Win/Loss/NR record overall and at specific venues
+Average score batting first vs chasing, by format
+H2H record: last 5, 10, 20 matches, by format
+Toss win %, decision pattern, and outcome post-toss
+Home vs Away vs Neutral venue performance
+Player Level
+Batting: Runs, Avg, SR, 50s, 100s, last 5 innings scores, Dot Ball %
+Bowling: Wickets, Avg, Economy, SR, last 5 match figures, Death over economy
+Fielding: Catches, run-outs, stumping (for wicketkeepers)
+Player form score: weighted average of last 5 vs last 20 performances
+Player vs specific opposition: career stats head-to-head
+Match Context
+Pitch type classification: Flat, Spin-friendly, Seam-friendly, Balanced
+Weather: D/N match, Dew factor, Rain probability (via OpenWeather API)
+Toss factor weight by venue (historically significant or not)
+Team news: injury updates, squad changes, player availability
+3.3 Database Schema (Simplified)
+4. Prediction Engine
+The prediction engine is the core intelligence of CricPredict. It uses a multi-factor weighted scoring model, with an optional Machine Learning layer for improved accuracy over time.
+4.1 Phase 1 — Weighted Scoring Model (Launch)
+A transparent, explainable model. Each factor is scored and weighted to produce a win probability.
+4.2 Phase 2 — Machine Learning Layer (Post-launch)
+Model: Logistic Regression → Random Forest → XGBoost (iterative improvement)
+Training data: 50,000+ historical matches from Kaggle + scraped data
+Features: 40+ engineered features including form, H2H, pitch, conditions
+Validation: 80/20 train-test split, tested on 2023–2025 unseen matches
+Re-training: Monthly automated retraining pipeline with new match data
+5. Full Feature List
+5.1 Core Features (MVP)
+Select Team A vs Team B, format, venue → get win probability + key reasonsMatch Predictor: 
+Full H2H history with filters (last 5 / 10 / all-time / by format)Head-to-Head Dashboard: 
+Both teams' current squads with roles, form badges, and key statsSquad Viewer: 
+Last 5 match stats, form trend sparkline, hot/cold indicatorPlayer Form Cards: 
+Ground stats — avg scores, high/low totals, pace vs spin assistVenue Intelligence: 
+International (Tests/ODIs/T20Is), IPL, BBL, PSL, SA20, CPL, The Hundred, WPLTournament Coverage: 
+5.2 Advanced Features (Post-MVP)
+Specific batter vs specific bowler career matchup statsPlayer vs Player: 
+Interactive chart of a player's performance over last 12 monthsForm Timeline: 
+AI-suggested playing XI based on pitch and conditionsBest XI Suggester: 
+In-match win probability that updates ball-by-ballLive Match Mode: 
+Predict Dream11/Fantasy points for upcoming matchesFantasy Points Predictor: 
+Push notifications for squad announcements and pre-match predictionsAlerts & Notifications: 
+Community prediction leaderboard — users submit predictions, ranked by accuracyLeaderboard: 
+5.3 User-Facing Pages
+6. Technology Stack
+7. Execution Phases & Timeline
+The project is broken into 5 phases. Total estimated timeline: 10–12 months from kickoff to full product launch.
+8. IPL — Deep Dive (Priority Feature)
+IPL is the highest-priority franchise league. The Indian audience is deeply engaged with IPL, and this section details what makes the IPL coverage realistic and comprehensive.
+8.1 IPL-Specific Data
+All IPL seasons: 2008 to present (available via Kaggle CSVs + CricAPI)
+Ball-by-ball data: every delivery, batsman, bowler, runs, extras, wicket type
+Auction history: player prices, team compositions each year
+Powerplay, middle overs, death overs split stats for each team and player
+Venue-specific IPL stats: Wankhede vs Chepauk vs Eden Gardens etc.
+Day vs Night match performance differentials
+Playoff record: each team's performance under knockout pressure
+8.2 IPL Teams Covered
+8.3 IPL Prediction Factors (Additional)
+Retention vs auction players — new combinations take time to gel
+Home ground advantage is significant in IPL — factor weighted higher than international
+Chasing vs defending record at each IPL venue
+Impact Player rule effect — tracked separately from 2023 onwards
+9. International Cricket Coverage
+9.1 Formats Covered
+9.2 Top H2H Rivalries (High Traffic Expected)
+India vs Pakistan — most-searched cricket H2H globally
+India vs Australia — Border-Gavaskar Trophy + bilateral series
+India vs England — marquee Test and white-ball series
+India vs South Africa, New Zealand, West Indies
+IPL franchise rivalries: MI vs CSK, RCB vs KKR etc.
+10. Team & Resources
+Recommended team composition to execute this project end-to-end. Can be built solo with longer timelines or with a small team efficiently.
+10.1 Cost Estimate (Monthly, at launch)
+11. Risks & Mitigations
+12. Summary Roadmap
+13. Starting for Free — Zero-Cost Launch Plan
+The entire CricPredict MVP can be built and deployed without spending a single rupee. Below is a complete breakdown of free tools, free data sources, free hosting, and a phased build sequence to get a working product live at ₹0 / $0.
+13.1 Free Data Sources
+13.2 Free Tech Stack (Full Platform)
+13.3 Free Build Sequence (8 Weeks to Working MVP)
+Match Coverage (Priority Order)
+• PRIORITY 1 — International Cricket: Test, ODI, T20I (all ICC member nations)
+• PRIORITY 2 — IPL: Indian Premier League (all 10 teams, 2008–present)
+• PRIORITY 3 — Other Franchise Leagues: BBL, PSL, SA20, CPL, The Hundred, WPL
+Metric | Target | Measurement
+Prediction Accuracy | >62% on test matches | Backtested on 2023–25 data
+IPL Prediction Accuracy | >65% | Backtested on IPL 2022–25
+Data Freshness | Within 24 hours | Post-match data update lag
+Page Load Time | <2 seconds | Lighthouse performance score
+Indian Users (6 months) | 50,000 MAU | Google Analytics
+Source | Data Provided | Cost / Access
+CricAPI (cricapi.com) | Live scores, player stats, squad lists, match results | Free tier: 100 req/day | Paid: $15/mo
+Cricbuzz API (RapidAPI) | Real-time match data, commentary, rankings | RapidAPI — ~$10/mo
+ESPN Cricinfo (scraping) | Deep historical data, scorecards, player profiles | Scraping (ethical, rate-limited)
+Kaggle Datasets | IPL 2008–2024 ball-by-ball CSVs, ODI/T20 datasets | Free download
+ICC Official API | Official rankings, squad announcements | Public endpoints
+Sportradar Cricket | Premium live + historical feeds | Paid — future upgrade
+Table | Key Fields | Records (Est.)
+teams | team_id, name, format, league, country | ~200
+players | player_id, name, team_id, role, dob, nationality | ~5,000
+matches | match_id, team_a, team_b, format, venue, date, winner, toss | ~100,000
+innings | innings_id, match_id, batting_team, score, wickets, overs | ~200,000
+player_stats | stat_id, player_id, match_id, runs, balls, wkts, economy | ~2M+
+venues | venue_id, name, city, country, avg_1st_innings, pitch_type | ~500
+h2h_summary | team_a, team_b, format, wins_a, wins_b, draws, last_played | ~10,000
+Factor | Weight | Description
+Head-to-Head History | 25% | Last 10 H2H results, format-specific
+Recent Team Form | 20% | Last 5 matches overall, win streak
+Player Form Index | 20% | Top 6 batters + top 4 bowlers composite score
+Venue Performance | 15% | Both teams' historical record at the ground
+Pitch & Conditions | 10% | Pitch type vs team strengths (spin/pace heavy)
+Toss Factor | 5% | Toss win rate + venue toss-outcome correlation
+Squad Strength | 5% | Injury-adjusted playing XI quality score
+Realism Principle
+• No model predicts cricket with >70% accuracy reliably — variance is inherent to the sport.
+• CricPredict shows confidence levels (High / Medium / Low) alongside every prediction.
+• Predictions include key reasons: e.g., 'India favoured: 7/10 H2H wins, Kohli averaging 68 in last 5'.
+• Users can see every contributing factor — full transparency, no black-box outputs.
+Page | Description
+Home / Landing | Upcoming matches carousel, trending predictions, quick predictor
+Predict Match | Core predictor tool — team selector, format, venue, output
+Team Profile | Full stats for any team — form, H2H record, squad, recent matches
+Player Profile | Career stats, form chart, recent innings/bowling figures
+H2H Comparison | Deep dive between two specific teams
+Venue Page | Ground profile — stats, pitch type, team records there
+Tournament Hub | IPL / International / Franchise league dedicated dashboards
+My Predictions | User's saved predictions history with accuracy tracking
+Layer | Technology | Reason
+Frontend | React + Next.js 14 | SSR for SEO, fast page loads, great ecosystem
+Styling | Tailwind CSS + shadcn/ui | Rapid development, consistent UI
+Charts & Viz | Recharts + D3.js | Form charts, win probability gauges
+Backend API | Python FastAPI | Fast, async, perfect for ML model serving
+ML / Data Science | scikit-learn, pandas, XGBoost | Prediction models + data processing
+Database | PostgreSQL | Relational, handles complex stat queries well
+Caching | Redis | Cache frequent queries (team stats, H2H), sub-100ms
+Data Pipeline | Apache Airflow (later) / Cron jobs | Scheduled match data ingestion
+Auth | NextAuth.js | Social login (Google, phone OTP for India)
+Hosting (Frontend) | Vercel | Zero-config Next.js deployment
+Hosting (Backend) | AWS EC2 / Railway.app | FastAPI + Postgres
+CDN | Cloudflare | Fast delivery across India + global
+Mobile (Future) | React Native / Expo | Android-first for Indian users
+PHASE 1
+Weeks 1–6 | Foundation & Data Setup
+• Set up PostgreSQL schema for all match, player, team, venue data
+• Download and clean Kaggle IPL & international cricket datasets
+• Build data ingestion scripts: CricAPI + ESPN Cricinfo scraper
+• Implement H2H summary builder and player form scoring algorithm
+• Unit test all data pipelines, verify data accuracy against known results
+PHASE 2
+Weeks 7–12 | Prediction Engine (V1)
+• Build weighted scoring model (25/20/20/15/10/5/5 factor weights)
+• Create backtesting framework — validate against 2022–2025 matches
+• Tune weights based on backtesting results to hit >60% accuracy
+• Build REST API endpoints: /predict, /h2h, /team/{id}, /player/{id}
+• Document all API endpoints (Swagger/OpenAPI)
+PHASE 3
+Weeks 13–20 | Frontend MVP
+• Build Next.js app with core pages: Home, Predictor, Team, Player, H2H
+• Implement squad viewer with player form badges (Hot / Cold / Neutral)
+• Build H2H comparison page with filters and visual win/loss chart
+• Build venue intelligence page with pitch type indicator
+• Mobile-responsive design (Android-first for Indian users)
+• IPL Tournament Hub — all 10 teams, squad, stats, predictions
+• International hub — all ICC nations, all formats
+PHASE 4
+Weeks 21–28 | ML Upgrade + Advanced Features
+• Train Random Forest / XGBoost model on 50,000+ historical matches
+• A/B test ML model vs weighted model, deploy winner
+• Build Player vs Player matchup tool (batter vs bowler stats)
+• Add Fantasy Points Predictor for Dream11-style leagues
+• Add user accounts, saved predictions, and accuracy leaderboard
+• Integrate push notifications for squad news and match predictions
+PHASE 5
+Weeks 29–40 | Launch & Growth
+• Launch Android app (React Native / Expo)
+• Add live match win probability (ball-by-ball updates via WebSocket)
+• Add BBL, PSL, SA20, CPL, The Hundred, WPL franchise leagues
+• SEO optimisation — target 'IPL prediction today', 'India vs Pakistan H2H' etc.
+• Social sharing: shareable prediction cards for WhatsApp and Instagram
+• Monitor accuracy weekly, retrain ML model monthly
+Team | Short | Base City
+Mumbai Indians | MI | Mumbai
+Chennai Super Kings | CSK | Chennai
+Royal Challengers Bengaluru | RCB | Bengaluru
+Kolkata Knight Riders | KKR | Kolkata
+Delhi Capitals | DC | Delhi
+Rajasthan Royals | RR | Jaipur
+Sunrisers Hyderabad | SRH | Hyderabad
+Punjab Kings | PBKS | Mohali
+Lucknow Super Giants | LSG | Lucknow
+Gujarat Titans | GT | Ahmedabad
+Format | Key Features | Indian Priority Matches
+Test Matches | 5-day form, pitch decay, session analysis | India vs Aus, India vs Eng, India vs SA
+ODI | 50-over average, Powerplay dominance, Death hitting | Asia Cup, Champions Trophy, World Cup
+T20 International | Strike rate focus, death bowling, boundary % | T20 World Cup, Bilateral series
+Role | Responsibility | Solo / Team
+Full-Stack Dev (You) | Frontend (Next.js), Backend (FastAPI), deployment | Solo — Core
+Data Engineer | Pipelines, scraping, DB design, Airflow | Solo or hire freelancer
+ML Engineer | Model training, backtesting, feature engineering | Solo (Python) or freelancer
+UI/UX Designer | Visual design, mobile UX, dashboards | Optional — use templates
+Cricket Domain Expert | Validate predictions, identify blind spots | Advisor / consultant
+Item | Cost (USD/mo) | Notes
+CricAPI Paid Plan | $15 | Real-time data, 5,000 req/day
+RapidAPI (Cricbuzz) | $10 | Live scores and squad data
+AWS EC2 (t3.medium) | $30 | FastAPI + PostgreSQL backend
+Vercel (Pro) | $20 | Next.js frontend hosting
+Redis (Upstash) | $0–10 | Free tier sufficient at start
+OpenWeather API | $0 | Free tier for weather data
+Total | ~$75–85/mo | Scales with user growth
+Risk | Likelihood | Mitigation
+API rate limit exceeded | Medium | Implement Redis caching, batch pre-fetch for upcoming matches
+Scraping blocked by Cricinfo | Medium | Use official APIs first; scrape only as fallback with rate limiting
+ML model below 60% accuracy | Medium | Fall back to weighted model; be transparent about confidence levels
+Data staleness (squad changes) | High | Daily automated sync job + manual override for breaking news
+IPL auction changes squads overnight | High | Auction-triggered data refresh pipeline, squad lock before matches
+Legal issues around prediction | Low | Not a gambling platform — no money involved; clearly labelled as AI prediction
+High server load during IPL season | Medium | Pre-scale AWS during IPL; cache all popular H2H predictions
+Month | Milestone
+Month 1–1.5 | Database designed, historical data loaded (IPL 2008–2025 + International)
+Month 2–3 | Prediction API live, V1 weighted model backtested and validated
+Month 4–5 | MVP frontend launched — Predictor, H2H, Squad, Player pages
+Month 5–6 | IPL Tournament Hub launched ahead of IPL season
+Month 6–7 | ML model upgrade, Fantasy Points Predictor, User accounts
+Month 8–9 | Android app launched, Push notifications, Social sharing
+Month 10+ | All franchise leagues added, Live match probability, SEO growth
+Final Note — What Makes This Realistic
+• Data-first: Every prediction is traceable to specific stats — no vague AI confidence.
+• Transparency: Show users WHY a team is favoured, not just who is favoured.
+• Honest confidence: Always show Low / Medium / High confidence — cricket is unpredictable.
+• IPL-first for India: IPL hub is the headline feature, international is the depth.
+• Recency weighting: Recent form matters more than 3-year-old data — the model reflects this.
+• Community validation: Leaderboard lets the community validate prediction quality over time.
+Source | What You Get | Limit
+Kaggle Datasets | IPL 2008–2024 ball-by-ball CSVs, ODI/T20I historical match data | Unlimited
+CricAPI Free Tier | Live scores, squad lists, player stats, match results (cricapi.com) | 100 req/day
+ESPN Cricinfo Scraping | Deep historical scorecards, player profiles, career stats (ethical rate-limited) | Free (self-throttled)
+OpenCricket (GitHub) | Open-source structured cricket data (JSON format, ready to import) | Unlimited
+ICC Official Endpoints | Official player rankings, team standings, squad announcements | Free
+OpenWeather API | Match-day weather: temperature, humidity, dew factor, rain probability | 1,000 calls/day
+Layer | Free Tool | Free Tier Details
+Frontend | Next.js 14 + Tailwind CSS | Open source, free forever
+Frontend Hosting | Vercel Free Tier | Free forever for personal/hobby projects, global CDN included
+Backend API | Python FastAPI | Open source, free to run locally and deploy
+Backend Hosting | Railway.app Free Tier | $5 free credit/month — enough for a dev/staging backend
+Database | Supabase Free Tier | PostgreSQL, 500 MB storage, 2 free projects — sufficient for all MVP data
+Caching | Upstash Redis Free Tier | 10,000 requests/day free — cache H2H results, team stats, predictions
+ML / Data Science | scikit-learn, pandas, XGBoost + Google Colab | All free Python libraries; Google Colab gives free GPU for model training
+Version Control / CI | GitHub Free | Unlimited public repos + GitHub Actions (2,000 free CI minutes/month)
+Week | Goal | Tasks (All Free Tools)
+Week 1–2 | Data foundation | Download Kaggle IPL + international CSVs. Set up local PostgreSQL. Write Python scripts to clean and load data into Supabase free tier.
+Week 3–4 | Prediction model (V1) | Build weighted scoring model in Python (pandas + scikit-learn). Backtest on Google Colab (free GPU). Validate accuracy against 2022–2025 matches.
+Week 5–6 | API backend live | Build FastAPI with /predict, /h2h, /team, /player endpoints. Connect to Supabase. Deploy free on Railway.app. Test all endpoints via Postman (free).
+Week 7–8 | MVP frontend live | Build Next.js frontend: Predictor page, H2H comparison, Squad viewer, Player form cards. Deploy free on Vercel. Share with friends for first feedback.
+When to Upgrade from Free (Trigger Points)
+• CricAPI free 100 req/day is exhausted daily → upgrade to $15/mo paid plan
+• Supabase 500 MB storage is 80%+ full → upgrade to Supabase Pro ($25/mo) or migrate to AWS RDS
+• Railway free credit runs out or backend needs always-on uptime → upgrade to Railway Hobby ($5/mo)
+• Reaching 500+ daily users → full paid stack at ~$75–85/month as per Section 10
