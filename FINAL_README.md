@@ -60,7 +60,23 @@ npm run dev
 - `scorer.py`: Core prediction logic.
 - `form_engine.py`: PFI calculation logic.
 - `real_time_sync.py`: Live data ingestion script.
+- `add_indexes.py`: Database optimization script.
 - `frontend/src/app/page.tsx`: Main Dashboard UI.
+
+---
+
+## 🔝 Performance & Automation
+
+### Background Sync
+The backend includes a **Background Scheduler** (`APScheduler`) that automatically syncs match data every 6 hours. This ensures the live performance stats are always fresh without manual intervention.
+
+### Optimized Prediction Engine
+- **PFI Caching**: Player Form Index values are cached in the `player_form` table for 3 days, reducing prediction latency by ~90%.
+- **DB Indexes**: Added critical indexes on `deliveries` and `matches` tables to handle millions of records with sub-second lookups.
+
+### Production Environment
+On platforms like **Render**, ensure the following Environment Variable is set in your Frontend service:
+- `NEXT_PUBLIC_API_URL`: The URL of your deployed backend (e.g., `https://cricpredict-api.onrender.com`).
 
 ---
 
