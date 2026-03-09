@@ -10,6 +10,8 @@ import requests
 from typing import Optional, List, Dict
 from models import Team, Venue
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
+import datetime
 
 load_dotenv()
 
@@ -22,6 +24,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize Scheduler
+scheduler = BackgroundScheduler()
+
+def scheduled_sync():
+    """Background task to sync matches."""
+    print(f"[{datetime.datetime.now()}] Automatic background sync started...")
+    try:
+        sync_recent_matches()
+    except Exception as e:
+        print(f"[{datetime.datetime.now()}] Background sync failed: {str(e)}")
+
+# Schedule sync every 6 hours
+scheduler.add_job(scheduled_sync, 'interval', hours=6, next_run_time=datetime.datetime.now())
 
 # Dependency to get DB session
 def get_db():
@@ -167,4 +183,11 @@ def trigger_sync():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Start scheduler
+    scheduler.start()
+    print("Background scheduler started (Sync every 6 hours).")
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    finally:
+        scheduler.shutdown()
+        print("Background scheduler shut down.")

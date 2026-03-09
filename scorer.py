@@ -317,7 +317,7 @@ class MatchScorer:
             "venue": venue.name if venue else "Unknown Venue",
             "toss_winner": toss_winner.name if toss_winner else "N/A",
             "toss_decision": match.toss_decision.title() if match.toss_decision else "N/A",
-            "result": f"{winner.name} won by {match.win_margin}" if winner else "No Result / Tie",
+            "result": match.win_margin if match.win_margin and (winner.name.lower() in match.win_margin.lower()) else (f"{winner.name} won by {match.win_margin}" if winner and match.win_margin else (f"{winner.name} won" if winner else "No Result / Tie")),
             "scoreboard": [
                 {"team": t1.short_name or t1.name, "runs": runs_1, "wickets": wkt_1, "overs": overs_1},
                 {"team": t2.short_name or t2.name, "runs": runs_2, "wickets": wkt_2, "overs": overs_2}
@@ -340,7 +340,7 @@ class MatchScorer:
         
         last_match = self.db.query(Match).filter(
             (Match.team_a_id == team.team_id) | (Match.team_b_id == team.team_id)
-        ).filter(Match.format == match_format).order_by(desc(Match.date)).first()
+        ).filter(Match.format.ilike(match_format)).order_by(desc(Match.date)).first()
         
         if not last_match: return None
         
@@ -371,12 +371,17 @@ class MatchScorer:
             
             # Simple over calculation
             ov = s.overs if s.overs is not None else 0
-            overs_str = f"{ov}.{balls_in_last_over}" if balls_in_last_over < 6 else f"{ov+1}.0"
+            if balls_in_last_over >= 6:
+                overs_str = f"{ov+1}.0"
+            elif balls_in_last_over > 0:
+                overs_str = f"{ov}.{balls_in_last_over}"
+            else:
+                overs_str = f"{ov}.0"
             
             scoreboard.append({
                 "team": t_name,
                 "runs": int(s.total) if s.total else 0,
-                "wickets": s.wkts or 0,
+                "wickets": int(s.wkts) if s.wkts is not None else 0,
                 "overs": overs_str
             })
             
@@ -428,10 +433,10 @@ class MatchScorer:
             "match_title": f"{team_a.name if team_a else 'Unknown'} vs {team_b.name if team_b else 'Unknown'}",
             "date": str(last_match.date),
             "venue": f"{venue.name}, {venue.city}" if venue else "Unknown",
-            "result": f"{winner.name if winner else 'Match'} won by {last_match.win_margin or 'N/A'}" if winner or last_match.win_margin else "Match Draw/No Result",
+            "result": last_match.win_margin if last_match.win_margin and (winner.name.lower() in last_match.win_margin.lower()) else (f"{winner.name} won by {last_match.win_margin}" if winner and last_match.win_margin else (f"{winner.name} won" if winner else "Match result unknown")),
             "scoreboard": scoreboard,
-            "top_batsmen": top_batsmen,
-            "top_bowlers": top_bowlers
+            "top_batsmen": top_batsmen if top_batsmen else [{"name": "Data unavailable", "runs": 0, "balls": 0, "sr": 0}],
+            "top_bowlers": top_bowlers if top_bowlers else [{"name": "Data unavailable", "wickets": 0, "runs": 0, "overs": 0}]
         }
 
 
