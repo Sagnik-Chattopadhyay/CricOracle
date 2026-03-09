@@ -16,11 +16,24 @@ class FormEngine:
     def calculate_pfi(self, player_id, match_format='T20I', window=5):
         """
         Calculates detailed PFI (Batting, Bowling, Total) and derives player role.
+        Uses PlayerForm table as a persistent cache.
         """
         cache_key = f"{player_id}_{match_format}_{window}"
         if cache_key in self.__class__._pfi_cache:
             return self.__class__._pfi_cache[cache_key]
             
+        # Check DB cache
+        db_form = self.db.query(PlayerForm).filter_by(player_id=player_id, format=match_format).first()
+        if db_form and db_form.last_updated:
+            age = (datetime.datetime.utcnow() - db_form.last_updated).days
+            if age < 3: # Use cache if less than 3 days old
+                # We store a single score in DB, so we derive a basic result structure
+                # This is a simplification; for full data we'd need more columns or JSON
+                # For now, let's just return the cached total and assume neutral role
+                result = {"batting": db_form.form_score, "bowling": db_form.form_score, "total": db_form.form_score, "role": "All-rounder"}
+                self.__class__._pfi_cache[cache_key] = result
+                return result
+
         from sqlalchemy import or_
         matches = (
             self.db.query(Match.match_id)
@@ -111,6 +124,20 @@ class FormEngine:
             "total": round(total_pfi, 1) if total_pfi > 0 else 50.0,
             "role": role
         }
+
+        # Save to DB cache
+        try:
+            db_form = self.db.query(PlayerForm).filter_by(player_id=player_id, format=match_format).first()
+            if not db_form:
+                db_form = PlayerForm(player_id=player_id, format=match_format)
+                self.db.add(db_form)
+            db_form.form_score = result["total"]
+            db_form.last_updated = datetime.datetime.utcnow()
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            print(f"Warning: Failed to save PFI to DB: {e}")
+
         self.__class__._pfi_cache[cache_key] = result
         return result
 

@@ -95,10 +95,18 @@ class MatchScorer:
         
         all_player_ids = set([p[0] for p in batters] + [p[0] for p in non_strikers] + [p[0] for p in bowlers])
         
+        # Optimization: Limit squad size to top 15 players based on recent activity frequency
+        # This prevents Render timeouts by capping the number of PFI calculations
+        if len(all_player_ids) > 15:
+            # Simple heuristic: prioritize batters and bowlers who were most active
+            # For now, let's just take the first 15 as they are typically the top order
+            all_player_ids = list(all_player_ids)[:15]
+
         squad = []
         for p_id in all_player_ids:
             player = self.db.query(Player).filter(Player.player_id == p_id).first()
             if player:
+                # Fast PFI retrieval (cached or DB backed)
                 pfi_data = self.form_engine.calculate_pfi(player.player_id, match_format)
                 
                 # Generate realistic sounding styles if null

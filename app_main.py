@@ -17,6 +17,14 @@ load_dotenv()
 
 app = FastAPI(title="CricPredict API", description="AI-powered cricket match predictions")
 
+# Add Request Logging
+@app.middleware("http")
+async def log_requests(request, call_next):
+    print(f"[{datetime.datetime.now()}] Request: {request.method} {request.url.path}")
+    response = await call_next(request)
+    print(f"[{datetime.datetime.now()}] Response: {response.status_code}")
+    return response
+
 # Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
