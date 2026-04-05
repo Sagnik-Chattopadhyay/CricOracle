@@ -245,9 +245,9 @@ export default function Home() {
               fetchScoreboard={fetchScoreboard}
             />
 
-            {/* Atmospheric Analysis */}
-            <div className="lg:col-span-6 h-full">
-              <AnalyticsCard title="Atmospheric Vector" subtitle="Weather Trajectory Scan" className="h-full">
+            {/* Weather Analysis */}
+            <div className="lg:col-span-12 h-full">
+              <AnalyticsCard title="Weather" subtitle="Real-time Conditions" className="h-full">
                 <div className="flex flex-col items-center py-10 gap-10">
                   <div className="relative">
                     <div className="text-7xl drop-shadow-[0_0_30px_rgba(16,185,129,0.4)]">
@@ -263,7 +263,7 @@ export default function Home() {
                     <div className="font-space-grotesk text-[11px] text-primary uppercase tracking-[0.4em] font-bold mt-2">CITY: {prediction.venue.city.toUpperCase()}</div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 w-full px-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full px-4">
                     {[
                       { label: 'HUMIDITY', val: '42%' },
                       { label: 'WIND VELOCITY', val: '14 KM/H' },
@@ -275,43 +275,6 @@ export default function Home() {
                         <span className="font-space-grotesk text-lg font-bold text-white">{stat.val}</span>
                       </div>
                     ))}
-                  </div>
-                </div>
-              </AnalyticsCard>
-            </div>
-
-            {/* Strategic Decisioning */}
-            <div className="lg:col-span-6 h-full">
-              <AnalyticsCard title="Toss Architecture" subtitle="Strategic Momentum Engine" className="h-full">
-                <div className="flex flex-col items-center py-10 gap-8 h-full justify-between">
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/40 transition-all duration-500" />
-                    <div className="relative w-28 h-28 rounded-full border-2 border-primary/40 flex items-center justify-center glass-carbon overflow-hidden">
-                       <span className="text-5xl animate-[spin_5s_linear_infinite] drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">🪙</span>
-                    </div>
-                  </div>
-
-                  <div className="w-full px-4 space-y-3">
-                    {[
-                      { label: 'Venue Toss Dominance', val: '68%', active: true },
-                      { label: 'Defensive Strategy Win Rate', val: '61%', active: true },
-                      { label: 'Dew / Acceleration Factor', val: 'CRITICAL', active: false },
-                      { label: 'Toss Predictive Weighting', val: '5.2%', active: false }
-                    ].map((row, i) => (
-                      <div key={i} className="flex justify-between items-center p-4 rounded-xl glass-carbon border-white/5 hover:border-primary/30 transition-all group">
-                        <span className="font-space-grotesk text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] group-hover:text-white/70">{row.label}</span>
-                        <span className={cn("font-space-grotesk text-sm font-black", row.active ? "text-primary text-glow" : "text-white/80")}>{row.val}</span>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="w-full px-4 pt-4">
-                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-4">
-                       <span className="text-primary text-xl">⚡</span>
-                       <p className="font-inter text-[10px] text-primary/80 uppercase tracking-widest font-bold leading-relaxed">
-                         The toss outcome represents a high-entropy variable with a 15.4% volatility impact on current inference.
-                       </p>
-                    </div>
                   </div>
                 </div>
               </AnalyticsCard>
