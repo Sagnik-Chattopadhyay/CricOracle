@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from db import SessionLocal
 from scorer import MatchScorer
@@ -44,8 +45,9 @@ def scheduled_sync():
     except Exception as e:
         print(f"[{datetime.datetime.now()}] Background sync failed: {str(e)}")
 
-# Schedule sync every 6 hours
-scheduler.add_job(scheduled_sync, 'interval', hours=6, next_run_time=datetime.datetime.now())
+# Schedule sync every 6 hours (starting 5 mins from now to avoid startup lock)
+next_sync = datetime.datetime.now() + datetime.timedelta(minutes=5)
+scheduler.add_job(scheduled_sync, 'interval', hours=6, next_run_time=next_sync)
 
 # Dependency to get DB session
 def get_db():
@@ -158,7 +160,16 @@ def get_h2h_details(team_a: str, team_b: str, format: str = "IPL", limit: int = 
 @app.get("/search/teams", response_model=List[str])
 def search_teams(q: str, format: Optional[str] = None, db: Session = Depends(get_db)):
     """Search for teams by name (case-insensitive) with format-specific filtering."""
-    query = db.query(Team).filter(Team.name.ilike(f"%{q}%"))
+    from db import get_canonical_team_name
+    canonical_q = get_canonical_team_name(q)
+    
+    # Search for both the original query and the canonical version
+    query = db.query(Team).filter(
+        or_(
+            Team.name.ilike(f"%{q}%"),
+            Team.name.ilike(f"%{canonical_q}%")
+        )
+    )
     
     if format == 'IPL':
         query = query.filter(Team.team_type == 'Franchise')
@@ -166,12 +177,13 @@ def search_teams(q: str, format: Optional[str] = None, db: Session = Depends(get
         query = query.filter(Team.team_type == 'International')
         
     teams = query.limit(10).all()
-    return [t.name for t in teams]
+    return sorted(list(set([t.name for t in teams])))
+
 
 @app.get("/venues/countries", response_model=List[str])
 def get_venue_countries(db: Session = Depends(get_db)):
     """Get unique countries that have venues in the database."""
-    countries = db.query(Venue.country).filter(Venue.country != None).distinct().all()
+    countries = db.query(Venue.country).filter(Venue.country.isnot(None)).distinct().all()
     return sorted([c[0] for c in countries])
 
 @app.get("/venues/by-country", response_model=List[str])
@@ -182,10 +194,28 @@ def get_venues_by_country(country: str, db: Session = Depends(get_db)):
 
 @app.post("/sync")
 def trigger_sync():
-    """Manually trigger the live data sync."""
+    """Manually trigger the live data sync via CricAPI."""
     try:
         sync_recent_matches()
         return {"status": "success", "message": "Live data sync completed."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/sync/cricsheet")
+def trigger_cricsheet_sync(formats: Optional[str] = "IPL"):
+    """Manually trigger a full Cricsheet data refresh.
+    
+    This re-downloads the latest CSV data from cricsheet.org and ingests new matches.
+    Use this when CricAPI quota is exhausted or data is stale.
+    
+    Args:
+        formats: Comma-separated format list, e.g. "IPL" or "IPL,T20I,ODI,Tests"
+    """
+    try:
+        from update_ipl_data import run_update
+        format_list = [f.strip() for f in formats.split(",")]
+        run_update(format_list)
+        return {"status": "success", "message": f"Cricsheet sync completed for: {', '.join(format_list)}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -195,7 +225,7 @@ if __name__ == "__main__":
     scheduler.start()
     print("Background scheduler started (Sync every 6 hours).")
     try:
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        uvicorn.run(app, host="127.0.0.1", port=8000)
     finally:
         scheduler.shutdown()
         print("Background scheduler shut down.")

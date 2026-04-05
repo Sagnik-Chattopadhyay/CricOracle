@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from db import SessionLocal
+from db import SessionLocal, get_canonical_team_name
 from models import Match, Team, Venue, Delivery, Player
 from api_connector import CricketDataAPI
 from sqlalchemy.orm import Session
@@ -14,15 +14,16 @@ FORMAT_MAP = {
 
 def get_or_create_team(db: Session, team_name):
     # Standardize names (e.g., "India" instead of "India Women" if we want to merge, but let's keep it exact for now)
-    team = db.query(Team).filter(Team.name.ilike(team_name)).first()
+    canonical_name = get_canonical_team_name(team_name or "Unknown")
+    team = db.query(Team).filter(Team.name.ilike(f"%{canonical_name}%")).first()
     if not team:
-        team = Team(name=team_name, team_type="International" if "Women" not in team_name else "International")
+        team = Team(name=canonical_name, team_type="International" if "Women" not in canonical_name else "International")
         db.add(team)
         db.flush()
     return team
 
 def get_or_create_venue(db: Session, venue_name, city="Unknown"):
-    venue = db.query(Venue).filter(Venue.name.ilike(f"%{venue_name}%")).first()
+    venue = db.query(Venue).filter(Venue.name.ilike(f"%{venue_name or 'Unknown'}%")).first()
     if not venue:
         venue = Venue(name=venue_name, city=city)
         db.add(venue)

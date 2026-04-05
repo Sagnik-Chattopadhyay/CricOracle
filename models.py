@@ -10,13 +10,15 @@ class Team(Base):
     short_name = Column(String)
     country = Column(String)
     team_type = Column(String) # 'Franchise' or 'International'
+    logo_path = Column(String) # For authentic local logo URLs
 
 class Player(Base):
     __tablename__ = "players"
     player_id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     cricsheet_id = Column(String, unique=True, index=True)
-    team_id = Column(Integer, ForeignKey("teams.team_id"))
+    intl_team_id = Column(Integer, ForeignKey("teams.team_id")) # New for 2026 Refresh
+    franchise_team_id = Column(Integer, ForeignKey("teams.team_id")) # New for 2026 Refresh
     role = Column(String)
     batting_style = Column(String)
     bowling_style = Column(String)

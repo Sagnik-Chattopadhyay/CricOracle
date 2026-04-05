@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
-const bebasNeue = Bebas_Neue({
-  weight: "400",
-  variable: "--font-bebas-neue",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
 });
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-});
-
-const jetBrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
+  variable: "--font-space-grotesk",
 });
 
 export const metadata: Metadata = {
@@ -29,9 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn("font-sans scroll-smooth", inter.variable, spaceGrotesk.variable)}>
       <body
-        className={`${bebasNeue.variable} ${dmSans.variable} ${jetBrainsMono.variable} antialiased`}
+        className="antialiased min-h-screen selection:bg-primary/30 selection:text-primary"
       >
         {children}
       </body>

@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import datetime
 from sqlalchemy.orm import Session
-from db import SessionLocal, engine
+from db import SessionLocal, engine, get_canonical_team_name
 from models import Base, Team, Venue, Match, Player
 
 def get_or_create(session, model, lookup_kwargs, create_kwargs=None):
@@ -47,7 +47,8 @@ def ingest_match_info(file_path, league, format_name, db: Session):
         # Get or create Teams
         team_objs = []
         for t_name in teams_list:
-              team_objs.append(get_or_create(db, Team, {'name': t_name}))
+              canonical_name = get_canonical_team_name(t_name)
+              team_objs.append(get_or_create(db, Team, {'name': canonical_name}))
         
         # Ingest Players from registry
         with open(file_path, 'r', encoding='utf-8') as f:

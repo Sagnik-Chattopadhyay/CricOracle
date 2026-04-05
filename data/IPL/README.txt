@@ -119,6 +119,12 @@ the reason, while "other_player_dismissed" will show who was dismissed.
 Matches included in this archive
 --------------------------------
 
+2026-04-02 - club - IPL - male - 1527679 - Sunrisers Hyderabad vs Kolkata Knight Riders
+2026-04-01 - club - IPL - male - 1527678 - Lucknow Super Giants vs Delhi Capitals
+2026-03-31 - club - IPL - male - 1527677 - Gujarat Titans vs Punjab Kings
+2026-03-30 - club - IPL - male - 1527676 - Chennai Super Kings vs Rajasthan Royals
+2026-03-29 - club - IPL - male - 1527675 - Kolkata Knight Riders vs Mumbai Indians
+2026-03-28 - club - IPL - male - 1527674 - Sunrisers Hyderabad vs Royal Challengers Bengaluru
 2025-06-03 - club - IPL - male - 1473511 - Royal Challengers Bengaluru vs Punjab Kings
 2025-06-01 - club - IPL - male - 1473510 - Mumbai Indians vs Punjab Kings
 2025-05-30 - club - IPL - male - 1473509 - Mumbai Indians vs Gujarat Titans

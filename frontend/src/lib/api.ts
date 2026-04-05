@@ -16,6 +16,14 @@ export type TeamInfo = {
     squad: PlayerForm[];
     venue_adv: string;
     form_adv: string;
+    momentum?: string;
+    logo_path?: string;
+    top_performers?: Array<{
+        name: string;
+        stat: string;
+        role: string;
+        match_date: string;
+    }>;
 };
 
 export type H2HStats = {
@@ -71,7 +79,7 @@ export const getLastMatchScoreboard = async (team: string, format: string) => {
 
 export const getH2HDetails = async (teamA: string, teamB: string, format: string) => {
     try {
-        const response = await fetch(`${BASE_URL}/team/h2h-details?team_a=${encodeURIComponent(teamA)}&team_b=${encodeURIComponent(teamB)}&format=${format}&limit=5`);
+        const response = await fetch(`${BASE_URL}/team/h2h-details?team_a=${encodeURIComponent(teamA)}&team_b=${encodeURIComponent(teamB)}&format=${format}&limit=20`);
         if (!response.ok) {
             throw new Error(`Failed to fetch H2H details: ${response.statusText}`);
         }

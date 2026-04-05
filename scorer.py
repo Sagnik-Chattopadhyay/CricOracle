@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, or_, and_
 from models import Delivery, Match, Team, Venue, Player
 from form_engine import FormEngine
-from db import SessionLocal
+from db import SessionLocal, get_canonical_team_name
 import pandas as pd
 
 class MatchScorer:
@@ -16,17 +16,106 @@ class MatchScorer:
         self.form_engine = FormEngine(db)
 
     def calculate_h2h_advantage(self, team_a_id, team_b_id, match_format):
-        """Pillar 2: Head-to-Head History (25% Weight)"""
-        h2h_matches = self.db.query(Match).filter(
-            ((Match.team_a_id == team_a_id) & (Match.team_b_id == team_b_id)) |
-            ((Match.team_a_id == team_b_id) & (Match.team_b_id == team_a_id))
-        ).filter(Match.format == match_format).all()
+        """Pillar 2: Recent Head-to-Head History (Last 5 Encounters)"""
+        h2h_matches = (
+            self.db.query(Match).filter(
+                ((Match.team_a_id == team_a_id) & (Match.team_b_id == team_b_id)) |
+                ((Match.team_a_id == team_b_id) & (Match.team_b_id == team_a_id))
+            )
+            .filter(Match.format == match_format)
+            .order_by(desc(Match.date))
+            .limit(5)
+            .all()
+        )
         
         if not h2h_matches:
             return 0.5 # Neutral
             
         team_a_wins = sum(1 for m in h2h_matches if m.winner_id == team_a_id)
+        # Weighted older matches slightly less? 
+        # For simplicity, let's stick to pure win rate of the last 5 as requested.
         return team_a_wins / len(h2h_matches)
+
+    def get_recent_team_momentum(self, team_id, match_format, limit=5):
+        """Calculates win rate in the last 5 matches against any opponent."""
+        recent_matches = (
+            self.db.query(Match)
+            .filter((Match.team_a_id == team_id) | (Match.team_b_id == team_id))
+            .filter(Match.format == match_format)
+            .order_by(desc(Match.date))
+            .limit(limit)
+            .all()
+        )
+        
+        if not recent_matches:
+            return 0.5
+            
+        wins = sum(1 for m in recent_matches if m.winner_id == team_id)
+        return wins / len(recent_matches)
+
+    def get_top_performers_from_recent_match(self, team_id, match_format):
+        """Identifies 'Top Performers' (MVP candidates) from the team's most recent match."""
+        recent_match = (
+            self.db.query(Match)
+            .filter((Match.team_a_id == team_id) | (Match.team_b_id == team_id))
+            .filter(Match.format == match_format)
+            .order_by(desc(Match.date))
+            .first()
+        )
+        
+        if not recent_match:
+            return []
+            
+        # Get top 3 batters by runs
+        top_batters = (
+            self.db.query(
+                Player.name,
+                func.sum(Delivery.runs_off_bat).label('runs'),
+                func.count(Delivery.delivery_id).label('balls')
+            )
+            .join(Delivery, Player.player_id == Delivery.batsman_id)
+            .filter(Delivery.match_id == recent_match.match_id)
+            .filter(Delivery.batting_team_id == team_id)
+            .group_by(Player.name)
+            .order_by(desc('runs'))
+            .limit(2)
+            .all()
+        )
+
+        # Get top 2 bowlers by wickets
+        top_bowlers = (
+            self.db.query(
+                Player.name,
+                func.count(Delivery.player_dismissed_id).label('wickets'),
+                func.sum(Delivery.runs_off_bat + Delivery.extras).label('runs_conceded')
+            )
+            .join(Delivery, Player.player_id == Delivery.bowler_id)
+            .filter(Delivery.match_id == recent_match.match_id)
+            .filter(Delivery.bowling_team_id == team_id)
+            .group_by(Player.name)
+            .order_by(desc('wickets'), ('runs_conceded'))
+            .limit(2)
+            .all()
+        )
+
+        performers = []
+        for b in top_batters:
+            performers.append({
+                "name": b.name,
+                "stat": f"{b.runs} ({b.balls})",
+                "role": "Batsman",
+                "match_date": str(recent_match.date)
+            })
+        for bw in top_bowlers:
+            if bw.wickets > 0:
+                performers.append({
+                    "name": bw.name,
+                    "stat": f"{bw.wickets} wkts",
+                    "role": "Bowler",
+                    "match_date": str(recent_match.date)
+                })
+        
+        return performers
 
     def calculate_venue_advantage(self, team_id, venue_id, match_format):
         """Pillar 4: Venue Mastery (15% Weight)"""
@@ -71,55 +160,76 @@ class MatchScorer:
         return sum(pfi_scores) / len(pfi_scores) if pfi_scores else 0.5
 
     def get_team_squad(self, team_id, match_format):
-        """Fetch active squad players and their PFI from the most recent matches."""
-        recent_matches = self.db.query(Match).filter(
-            (Match.team_a_id == team_id) | (Match.team_b_id == team_id)
-        ).filter(Match.format == match_format).order_by(desc(Match.date)).limit(3).all()
+        """Fetch active squad players and their PFI.
         
-        if not recent_matches:
-            return []
+        Priority 1: Use curated squad data (franchise_team_id / intl_team_id columns)
+                     This reflects the LATEST 2025 roster after trades/auctions.
+        Priority 2: Fall back to players from recent match deliveries (legacy behavior)
+        """
+        from sqlalchemy import text
+        
+        # Determine which column to query based on format
+        if match_format == 'IPL':
+            squad_players = self.db.execute(
+                text("SELECT player_id FROM players WHERE franchise_team_id = :tid"),
+                {"tid": team_id}
+            ).fetchall()
+        else:
+            # For T20I, ODI, Tests - use international team mapping
+            squad_players = self.db.execute(
+                text("SELECT player_id FROM players WHERE intl_team_id = :tid"),
+                {"tid": team_id}
+            ).fetchall()
+        
+        # If curated squad exists, use it
+        if squad_players:
+            all_player_ids = [row[0] for row in squad_players]
+        else:
+            # Fallback: infer from recent match deliveries (legacy behavior)
+            recent_matches = self.db.query(Match).filter(
+                (Match.team_a_id == team_id) | (Match.team_b_id == team_id)
+            ).filter(Match.format == match_format).order_by(desc(Match.date)).limit(3).all()
             
-        match_ids = [m.match_id for m in recent_matches]
+            if not recent_matches:
+                return []
+                
+            match_ids = [m.match_id for m in recent_matches]
+            
+            batters = self.db.query(Delivery.batsman_id).filter(
+                Delivery.match_id.in_(match_ids), Delivery.batting_team_id == team_id
+            ).distinct().all()
+            
+            non_strikers = self.db.query(Delivery.non_striker_id).filter(
+                Delivery.match_id.in_(match_ids), Delivery.batting_team_id == team_id
+            ).distinct().all()
+            
+            bowlers = self.db.query(Delivery.bowler_id).filter(
+                Delivery.match_id.in_(match_ids), Delivery.bowling_team_id == team_id
+            ).distinct().all()
+            
+            all_player_ids = list(set(
+                [p[0] for p in batters] + [p[0] for p in non_strikers] + [p[0] for p in bowlers]
+            ))
         
-        batters = self.db.query(Delivery.batsman_id).filter(
-            Delivery.match_id.in_(match_ids), Delivery.batting_team_id == team_id
-        ).distinct().all()
-        
-        non_strikers = self.db.query(Delivery.non_striker_id).filter(
-            Delivery.match_id.in_(match_ids), Delivery.batting_team_id == team_id
-        ).distinct().all()
-        
-        bowlers = self.db.query(Delivery.bowler_id).filter(
-            Delivery.match_id.in_(match_ids), Delivery.bowling_team_id == team_id
-        ).distinct().all()
-        
-        all_player_ids = set([p[0] for p in batters] + [p[0] for p in non_strikers] + [p[0] for p in bowlers])
-        
-        # Optimization: Limit squad size to top 15 players based on recent activity frequency
-        # This prevents Render timeouts by capping the number of PFI calculations
+        # Cap at 15 for performance
         if len(all_player_ids) > 15:
-            # Simple heuristic: prioritize batters and bowlers who were most active
-            # For now, let's just take the first 15 as they are typically the top order
-            all_player_ids = list(all_player_ids)[:15]
+            all_player_ids = all_player_ids[:15]
 
         squad = []
         for p_id in all_player_ids:
             player = self.db.query(Player).filter(Player.player_id == p_id).first()
             if player:
-                # Fast PFI retrieval (cached or DB backed)
                 pfi_data = self.form_engine.calculate_pfi(player.player_id, match_format)
                 
-                # Generate realistic sounding styles if null
                 bat_style = player.batting_style
                 bowl_style = player.bowling_style
                 
                 if not bat_style:
-                    bat_style = "Right-Handed Batsman" if pfi_data["role"] in ["Batter", "All-rounder"] else "Right-Handed Batsman" # Default
+                    bat_style = "Right-Handed Batsman"
                 
                 if not bowl_style and pfi_data["role"] in ["Bowler", "All-rounder"]:
                     bowl_style = "Right-Arm Fast Bowler" if hash(player.name) % 2 == 0 else "Right-Arm Off Spin Bowler"
                 
-                # Mock avatar URL using UI Avatars for placeholder, but user can replace with CDN
                 encoded_name = player.name.replace(" ", "+")
                 avatar_url = f"https://ui-avatars.com/api/?name={encoded_name}&background=random&color=fff&size=128"
                 
@@ -141,6 +251,7 @@ class MatchScorer:
         """
         # Smart Team Lookup
         def find_team(name, fmt):
+            name = get_canonical_team_name(name)
             print(f"--- DEBUG: find_team('{name}', '{fmt}') ---")
             # Priority 1: Exact Match
             team = self.db.query(Team).filter(Team.name == name).first()
@@ -171,54 +282,86 @@ class MatchScorer:
         if not team_a or not team_b:
             return {"error": f"Teams not found: {team_a_name if not team_a else ''} {team_b_name if not team_b else ''}"}
             
-        # Pillar 2: H2H Advantage & Details
-        h2h_matches = self.db.query(Match).filter(
-            ((Match.team_a_id == team_a.team_id) & (Match.team_b_id == team_b.team_id)) |
-            ((Match.team_a_id == team_b.team_id) & (Match.team_b_id == team_a.team_id))
-        ).filter(Match.format == match_format).all()
+        # Pillar 2: Head-to-Head (Analytically Last 5, UI Global)
+        all_h2h_matches = (
+            self.db.query(Match).filter(
+                ((Match.team_a_id == team_a.team_id) & (Match.team_b_id == team_b.team_id)) |
+                ((Match.team_a_id == team_b.team_id) & (Match.team_b_id == team_a.team_id))
+            )
+            .filter(Match.format == match_format)
+            .order_by(desc(Match.date))
+            .all()
+        )
         
+        # Stats for UI (All Time)
         h2h_stats = {
-            "total": len(h2h_matches),
-            "team_a_wins": sum(1 for m in h2h_matches if m.winner_id == team_a.team_id),
-            "team_b_wins": sum(1 for m in h2h_matches if m.winner_id == team_b.team_id),
-            "draws": sum(1 for m in h2h_matches if m.winner_id is None)
+            "total": len(all_h2h_matches),
+            "team_a_wins": sum(1 for m in all_h2h_matches if m.winner_id == team_a.team_id),
+            "team_b_wins": sum(1 for m in all_h2h_matches if m.winner_id == team_b.team_id),
+            "draws": sum(1 for m in all_h2h_matches if m.winner_id is None)
         }
-        h2h_adv = h2h_stats["team_a_wins"] / h2h_stats["total"] if h2h_stats["total"] > 0 else 0.5
         
-        # Pillar 4: Venue Advantage
+        # Advantage for Calculation (Last 5 focus)
+        recent_h2h = all_h2h_matches[:5]
+        recent_a_wins = sum(1 for m in recent_h2h if m.winner_id == team_a.team_id)
+        h2h_adv = recent_a_wins / len(recent_h2h) if len(recent_h2h) > 0 else 0.5
+        
+        # Pillar 4: Venue Advantage (15% Weight)
         venue_adv_a = self.calculate_venue_advantage(team_a.team_id, venue.venue_id if venue else None, match_format)
         venue_adv_b = self.calculate_venue_advantage(team_b.team_id, venue.venue_id if venue else None, match_format)
         
-        # Pillar 1: Player Form Index
+        # Pillar 1 & 3: Recent Form & Player Index (40% Weight)
         team_a_squad = self.get_team_squad(team_a.team_id, match_format)
         team_b_squad = self.get_team_squad(team_b.team_id, match_format)
         
-        form_adv_a = sum([p['pfi'] / 100 for p in team_a_squad]) / len(team_a_squad) if team_a_squad else 0.5
-        form_adv_b = sum([p['pfi'] / 100 for p in team_b_squad]) / len(team_b_squad) if team_b_squad else 0.5
+        pfi_adv_a = sum([p['pfi'] / 100 for p in team_a_squad]) / len(team_a_squad) if team_a_squad else 0.5
+        pfi_adv_b = sum([p['pfi'] / 100 for p in team_b_squad]) / len(team_b_squad) if team_b_squad else 0.5
         
-        # Combined Score Calculation (H2H 40%, Venue 30%, Form 30%)
-        final_score_a = (h2h_adv * 0.4) + (venue_adv_a * 0.3) + (form_adv_a * 0.3)
-        final_score_b = ((1-h2h_adv) * 0.4) + (venue_adv_b * 0.3) + (form_adv_b * 0.3)
+        momentum_a = self.get_recent_team_momentum(team_a.team_id, match_format)
+        momentum_b = self.get_recent_team_momentum(team_b.team_id, match_format)
+        
+        # Form = 50% Squad Strength (PFI) + 50% Win Momentum
+        form_adv_a = (pfi_adv_a * 0.5) + (momentum_a * 0.5)
+        form_adv_b = (pfi_adv_b * 0.5) + (momentum_b * 0.5)
+        
+        # Top Performers for UI
+        top_performers_a = self.get_top_performers_from_recent_match(team_a.team_id, match_format)
+        top_performers_b = self.get_top_performers_from_recent_match(team_b.team_id, match_format)
+        
+        # Combined Score Calculation (H2H 45%, Venue 15%, Form 40%)
+        final_score_a = (h2h_adv * 0.45) + (venue_adv_a * 0.15) + (form_adv_a * 0.40)
+        final_score_b = ((1-h2h_adv) * 0.45) + (venue_adv_b * 0.15) + (form_adv_b * 0.40)
         
         total = final_score_a + final_score_b
         win_prob_a = round((final_score_a / total) * 100, 2)
         win_prob_b = round((final_score_b / total) * 100, 2)
         
+        # Fetch logo paths
+        from sqlalchemy import text
+        logo_a = self.db.execute(text("SELECT logo_path FROM teams WHERE team_id = :tid"), {"tid": team_a.team_id}).scalar()
+        logo_b = self.db.execute(text("SELECT logo_path FROM teams WHERE team_id = :tid"), {"tid": team_b.team_id}).scalar()
+
         return {
             "prediction": team_a_name if win_prob_a > 50 else team_b_name,
             "win_probability": f"{win_prob_a}%" if win_prob_a > 50 else f"{win_prob_b}%",
-            "confidence": "High (H2H + Venue + PFI)",
+            "confidence": "Extreme (Last 5 H2H + Team Momentum)",
             "team_a": {
                 "name": team_a.name,
                 "squad": team_a_squad,
                 "venue_adv": f"{round(venue_adv_a * 100)}%",
-                "form_adv": f"{round(form_adv_a * 100)}%"
+                "form_adv": f"{round(form_adv_a * 100)}%",
+                "momentum": f"{round(momentum_a * 100)}%",
+                "logo_path": logo_a,
+                "top_performers": top_performers_a
             },
             "team_b": {
                 "name": team_b.name,
                 "squad": team_b_squad,
                 "venue_adv": f"{round(venue_adv_b * 100)}%",
-                "form_adv": f"{round(form_adv_b * 100)}%"
+                "form_adv": f"{round(form_adv_b * 100)}%",
+                "momentum": f"{round(momentum_b * 100)}%",
+                "logo_path": logo_b,
+                "top_performers": top_performers_b
             },
             "h2h": h2h_stats,
             "venue": {
@@ -230,6 +373,7 @@ class MatchScorer:
 
     def get_detailed_h2h_matches(self, team_a_name, team_b_name, match_format='IPL', limit=5):
         def find_team(name, fmt):
+            name = get_canonical_team_name(name)
             team = self.db.query(Team).filter(Team.name == name).first()
             if team: return team
             ttype = 'Franchise' if fmt == 'IPL' else 'International'
@@ -325,10 +469,11 @@ class MatchScorer:
             "venue": venue.name if venue else "Unknown Venue",
             "toss_winner": toss_winner.name if toss_winner else "N/A",
             "toss_decision": match.toss_decision.title() if match.toss_decision else "N/A",
-            "result": match.win_margin if match.win_margin and (winner.name.lower() in match.win_margin.lower()) else (f"{winner.name} won by {match.win_margin}" if winner and match.win_margin else (f"{winner.name} won" if winner else "No Result / Tie")),
+            "result": match.win_margin if match.win_margin and (winner.name.lower() in match.win_margin.lower()) else (f"{winner.name} won by {match.win_margin}" if winner and match.win_margin else (f"Winner: {winner.name}" if winner else "No Result")),
+            "winner_logo": winner.logo_path if winner else None,
             "scoreboard": [
-                {"team": t1.short_name or t1.name, "runs": runs_1, "wickets": wkt_1, "overs": overs_1},
-                {"team": t2.short_name or t2.name, "runs": runs_2, "wickets": wkt_2, "overs": overs_2}
+                {"team": t1.short_name or t1.name, "logo": t1.logo_path, "runs": runs_1, "wickets": wkt_1, "overs": overs_1},
+                {"team": t2.short_name or t2.name, "logo": t2.logo_path, "runs": runs_2, "wickets": wkt_2, "overs": overs_2}
             ],
             "top_batsmen": [{"name": b.name, "runs": b.runs, "balls": b.balls} for b in top_batsmen],
             "top_bowlers": [{"name": b.name, "wickets": b.wickets, "runs": b.runs_conceded} for b in top_bowlers]
@@ -336,6 +481,7 @@ class MatchScorer:
     def get_team_last_match(self, team_name, match_format):
         # Smart Team Lookup
         def find_team(name, fmt):
+            name = get_canonical_team_name(name)
             team = self.db.query(Team).filter(Team.name == name).first()
             if team: return team
             ttype = 'Franchise' if fmt == 'IPL' else 'International'
@@ -388,6 +534,7 @@ class MatchScorer:
             
             scoreboard.append({
                 "team": t_name,
+                "logo": team_obj.logo_path if team_obj else None,
                 "runs": int(s.total) if s.total else 0,
                 "wickets": int(s.wkts) if s.wkts is not None else 0,
                 "overs": overs_str
@@ -442,6 +589,7 @@ class MatchScorer:
             "date": str(last_match.date),
             "venue": f"{venue.name}, {venue.city}" if venue else "Unknown",
             "result": last_match.win_margin if last_match.win_margin and (winner.name.lower() in last_match.win_margin.lower()) else (f"{winner.name} won by {last_match.win_margin}" if winner and last_match.win_margin else (f"{winner.name} won" if winner else "Match result unknown")),
+            "winner_logo": winner.logo_path if winner else None,
             "scoreboard": scoreboard,
             "top_batsmen": top_batsmen if top_batsmen else [{"name": "Data unavailable", "runs": 0, "balls": 0, "sr": 0}],
             "top_bowlers": top_bowlers if top_bowlers else [{"name": "Data unavailable", "wickets": 0, "runs": 0, "overs": 0}]
